@@ -123,7 +123,7 @@ class NeuralNetwork:
         return gradients 
 
     def update_parameters(self, dW: Tuple[np.ndarray], db: Tuple[np.ndarray], learning_rate: float):
-        """
+        """Update weights and biases at a given step of gradient descent
         """
         for i in range(self.n_layers):
             assert dW[i].shape == self.W[i].shape
@@ -131,7 +131,8 @@ class NeuralNetwork:
             self.b[i] -= db[i] * learning_rate
 
     def train(self, n_iterations: int, learning_rate: float=1.2, print_cost: bool=False):
-        """
+        """Run through gradient descent steps for a given numbrer of iterations, updating parameters
+        with a given learning rate. 
         """
         for i in range(n_iterations):
             forward_results = self.forward_propagation(X=self.X)
@@ -143,6 +144,6 @@ class NeuralNetwork:
                 print("Cost after iteration %i: %f" %(i, cost))
 
     def predict(self, X: np.ndarray, threshold: float=0.5):
-        """
+        """Use the learned weights to predict on a new set of data
         """
         return self.forward_propagation(X=X)['A'][-1] > threshold
