@@ -4,7 +4,10 @@ import numpy as np
 
 class NeuralNetwork:
     """A simple implementation of a neural network. Training examples X should be given in the shape of (number of fields, number of training examples), i.e.
-    each column vector represents a training example
+    each column vector represents a training example.
+
+    To use the NeuralNetwork class, initialize it with an X and Y, as well as the number of neurons you want in each layer of the network. Train the example using
+    the ```train``` method, specifying how many iterations to execute. You can retrieve accuracy, or predict on unseen samples by using the ```predict``` method.
     """
 
     def __init__(self, X: np.ndarray, Y: np.ndarray, n_neurons_hidden_layers: Tuple[int]):
