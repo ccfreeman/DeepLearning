@@ -92,7 +92,7 @@ class NeuralNetwork:
         """
         # Cache the number of training samples
         m = Y.shape[1]
-        cost = -(np.dot(np.log(A), Y.T) + np.dot(np.log(1 - A), (~Y).T)) / m
+        cost = -(np.dot(np.log(A), Y.T) + np.dot(np.log(1 - A), (1 - Y).T)) / m
         return float(np.squeeze(cost))
 
     def backward_propagation(self, Y: np.ndarray, A: Tuple[np.ndarray]):
@@ -105,7 +105,7 @@ class NeuralNetwork:
         dZ, dW, db = [], [], []
 
         # Step backward through each layer of the network and compute the derivatives
-        for i in range(self.n_layers-1, 0-1, -1):
+        for i in reversed(range(self.n_layers)):
             # print(f"Performing backward propagation on layer {i}")
             if i == self.n_layers-1:
                 # The final layer of the network uses the sigmoid function for activation
