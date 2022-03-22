@@ -11,16 +11,18 @@ class NeuralNetwork:
     the ```train``` method, specifying how many iterations to execute. You can retrieve accuracy, or predict on unseen samples by using the ```predict``` method.
     """
 
-    def __init__(self, X: np.ndarray, Y: np.ndarray, n_neurons_hidden_layers: Tuple[int], random_seed: int=1):
+    def __init__(self, X: np.ndarray, Y: np.ndarray, n_neurons_hidden_layers: Tuple[int], shrinking_factor: float=.1, random_seed: int=1):
         self.X, self.Y = X, Y
-        self.parameters = self.define_network(X=X, Y=Y, n_neurons_hidden_layers=n_neurons_hidden_layers, random_seed=random_seed)
+        self.parameters = self.define_network(
+            X=X, Y=Y, n_neurons_hidden_layers=n_neurons_hidden_layers, random_seed=random_seed, shrinking_factor=shrinking_factor
+        )
 
     def initialize_weights(self, shape: Tuple[int], shrinking_factor: float):
         """Initialize a matrix of weights with given dimensions and a shrinking factor given by argument
         """
         return np.random.randn(shape[0], shape[1]).astype(np.float32) * shrinking_factor
 
-    def define_network(self, X: np.ndarray, Y: np.ndarray, n_neurons_hidden_layers: Tuple[int], random_seed: int, shrinking_factor: float=0.01):
+    def define_network(self, X: np.ndarray, Y: np.ndarray, n_neurons_hidden_layers: Tuple[int], random_seed: int, shrinking_factor: float):
         """Define the shape of the network. Weights and biases are stored as lists of matrices. Each element of the list represents the weights|biases at a
         given level of the network
         """
@@ -90,13 +92,13 @@ class NeuralNetwork:
     ##########################################
     
     def linear_forward(self, A: np.ndarray, W: np.ndarray, b: np.ndarray):
-        """
+        """The linear step for a forward pass
         """
         Z = np.dot(W, A) + b
         return Z
 
     def linear_activation_forward(self, A_prev: np.ndarray, W: np.ndarray, b: np.ndarray, activation: str):
-        """
+        """Execute the linear step for a forward pass and the activation step
         """
         Z = self.linear_forward(A=A_prev, W=W, b=b)
         if activation == 'sigmoid':
@@ -108,7 +110,7 @@ class NeuralNetwork:
     def forward_propagation(self, X: np.ndarray):
         """Perform one step of forward propagation through all the layers of the network
         """
-        A  = X
+        A = X
         Z_, A_ = [], []
 
         for l in range(self.n_layers - 1):
@@ -118,7 +120,7 @@ class NeuralNetwork:
             A_.append(A)
 
         ZL, AL = self.linear_activation_forward(
-            A_prev=A, W=self.W[self.n_layers - 1], b=self.b[self.n_layers - 1], activation='sigmoid'
+            A_prev=A, W=self.W[-1], b=self.b[-1], activation='sigmoid'
         )
         Z_.append(ZL)
         A_.append(AL)
@@ -133,7 +135,7 @@ class NeuralNetwork:
         return float(np.squeeze(cost))
 
     def linear_backward(self, dZ: np.ndarray, A_prev: np.ndarray, W: np.ndarray):
-        """
+        """Execute the backward pass over the linear step at a given layer
         """
         m = A_prev.shape[1]
         dW = np.dot(dZ, A_prev.T) / m
@@ -143,7 +145,7 @@ class NeuralNetwork:
         return dA_prev, dW, db
 
     def linear_activation_backward(self, dA: np.ndarray, A: np.ndarray, A_prev: np.ndarray, Z: np.ndarray, W: np.ndarray, activation: str):
-        """
+        """Execute the backward pass over the activation step and the linear step of a given layer
         """
         if activation == 'relu':
             dZ = self.relu_prime(dA=dA, Z=Z)
@@ -152,20 +154,20 @@ class NeuralNetwork:
         dA_prev, dW, db = self.linear_backward(dZ=dZ, A_prev=A_prev, W=W)
         return dA_prev, dW, db
 
-
     def backward_propagation(self, Z: Tuple[np.ndarray], A: Tuple[np.ndarray], Y: np.ndarray):
         """Perform the backward propagation algorithm, iterating through each layer of the network from end to start
         and using the derivatives of the activation functions at each layer to determine how we should update our parameters.
         """
         AL, A_prev = A[-1], A[-2]
         ZL, Z_prev = Z[-1], Z[-2]
+        WL, W_prev = self.W[-1], self.W[-2]
         Y = Y.reshape(AL.shape)
 
         dW, db = [], []
 
         dAL = - ((Y / AL) - ((1 - Y) / (1 - AL)))
 
-        dA_prev_temp, dW_temp, db_temp = self.linear_activation_backward(dA=dAL, A=AL, A_prev=A_prev, Z=ZL, W=self.W[-1], activation='sigmoid')
+        dA_prev_temp, dW_temp, db_temp = self.linear_activation_backward(dA=dAL, A=AL, A_prev=A_prev, Z=ZL, W=WL, activation='sigmoid')
         dW.append(dW_temp)
         db.append(db_temp)
 
@@ -173,10 +175,13 @@ class NeuralNetwork:
             if l == 0:
                 A_, A_prev = A_prev, self.X
                 Z_, Z_prev = Z_prev, None
+                W_, W_prev = W_prev, None
             else:
                 A_, A_prev = A_prev, A[l-1]
                 Z_, Z_prev = Z_prev, Z[l-1]
-            dA_prev_temp, dW_temp, db_temp = self.linear_activation_backward(dA=dA_prev_temp, A=A_, A_prev=A_prev, Z=Z_, W=self.W[l], activation='relu')
+                W_, W_prev = W_prev, self.W[l-1]
+
+            dA_prev_temp, dW_temp, db_temp = self.linear_activation_backward(dA=dA_prev_temp, A=A_, A_prev=A_prev, Z=Z_, W=W_, activation='relu')
             dW.append(dW_temp)
             db.append(db_temp)
         dW.reverse()
