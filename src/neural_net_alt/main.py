@@ -1,5 +1,6 @@
 from typing import Tuple
 import numpy as np
+from src.activation_units import Sigmoid, Relu
 
 
 class NeuralNetwork:
@@ -15,6 +16,10 @@ class NeuralNetwork:
         self.parameters = self.define_network(
             X=X, Y=Y, n_neurons_hidden_layers=n_neurons_hidden_layers, random_seed=random_seed, shrinking_factor=shrinking_factor
         )
+        self.activations = {
+            'sigmoid': Sigmoid(),
+            'relu'   : Relu(),
+        }
 
     def initialize_weights(self, shape: Tuple[int], shrinking_factor: float):
         """Initialize a matrix of weights with given dimensions and a shrinking factor given by argument
@@ -41,50 +46,7 @@ class NeuralNetwork:
         # # Define the activation and derivatives of activation functions for each layer of the network
         # self.activations = [self.relu for layer in range(self.n_layers - 1)] + [self.sigmoid]
         # self.derivatives = [self.relu_prime for layer in range(self.n_layers - 1)] + [self.sigmoid_prime]
-
-    #####################################################################
-    ## Define several functions we need for the backpropagation algorithm
-    #####################################################################
-
-    def sigmoid(self, Z: np.ndarray):
-        """The sigmoid function normalizes values to [0, 1]
-        """
-        return 1 / (1 + np.exp(-Z))
-
-    def sigmoid_prime(self, dA: np.ndarray, A: np.ndarray, Z: np.ndarray):
-        """Derivative of the sigmoid function
-        """
-        # dZ = np.multiply(np.multiply(A, 1 - A), dA)
-        # dA * A * (1 - A)
-        dZ = dA * A * (1 - A)
-        assert dZ.shape == Z.shape
-        return dZ
-
-    def tanh(self, Z: np.ndarray):
-        """Wrapper for the hyperbolic tangent function
-        """
-        return np.tanh(Z)
-
-    def tanh_prime(self, W: np.ndarray, dZ: np.ndarray, dA: np.ndarray):
-        """Derivative of the tanh function
-        """
-        return np.dot(W.T, dZ) * (1 - dA**2)
-
-    def relu(self, Z: np.ndarray):
-        """
-        """
-        A = np.maximum(0, Z)
-        assert A.shape == Z.shape
-        return A
-    
-    def relu_prime(self, dA: np.ndarray, Z: np.ndarray):
-        """
-        """
-        dZ = np.array(dA, copy=True)
-        # When z <= 0, you should set dz to 0 as well. 
-        dZ[Z <= 0] = 0
-        assert dZ.shape == Z.shape
-        return dZ
+        
 
     ##########################################
     ## Define forward and backward propagation
@@ -100,10 +62,7 @@ class NeuralNetwork:
         """Execute the linear step for a forward pass and the activation step
         """
         Z = self.linear_forward(A=A_prev, W=W, b=b)
-        if activation == 'sigmoid':
-            A = self.sigmoid(Z)
-        elif activation == 'relu':
-            A = self.relu(Z)
+        A = self.activations[activation].forward(Z=Z)
         return Z, A
 
     def forward_propagation(self, X: np.ndarray):
@@ -146,10 +105,7 @@ class NeuralNetwork:
     def linear_activation_backward(self, dA: np.ndarray, A: np.ndarray, A_prev: np.ndarray, Z: np.ndarray, W: np.ndarray, activation: str):
         """Execute the backward pass over the activation step and the linear step of a given layer
         """
-        if activation == 'relu':
-            dZ = self.relu_prime(dA=dA, Z=Z)
-        elif activation == 'sigmoid':
-            dZ = self.sigmoid_prime(dA=dA, A=A, Z=Z)
+        dZ = self.activations[activation].backward(dA=dA, A=A, Z=Z)
         dA_prev, dW, db = self.linear_backward(dZ=dZ, A_prev=A_prev, W=W)
         return dA_prev, dW, db
 
